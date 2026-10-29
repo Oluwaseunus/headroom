@@ -5,6 +5,17 @@ APP="$PWD/Menu Bar Toggle.app"
 BUILD="$PWD/.build"
 mkdir -p "$APP/Contents/MacOS" "$BUILD/module-cache"
 SDK=$(xcrun --sdk macosx --show-sdk-path)
+SIGNING_IDENTITY="${MENU_BAR_SIGNING_IDENTITY:-}"
+if [[ -z "$SIGNING_IDENTITY" ]]; then
+  # Prefer the one available Developer ID identity; never silently fall back
+  # to ad-hoc signing, which invalidates Accessibility grants after rebuilds.
+  IDENTITIES=$(security find-identity -v -p codesigning)
+  SIGNING_IDENTITY=$(print -r -- "$IDENTITIES" | awk '/"Developer ID Application:/ { print $2 }')
+fi
+if [[ -z "$SIGNING_IDENTITY" || "$SIGNING_IDENTITY" == *$'\n'* || "$SIGNING_IDENTITY" == "-" ]]; then
+  print -u2 'Set MENU_BAR_SIGNING_IDENTITY to a valid code-signing certificate name or SHA-1. A stable identity is required for Accessibility permission continuity.'
+  exit 1
+fi
 xcrun swiftc -O -warnings-as-errors -sdk "$SDK" -target arm64-apple-macosx15.0 \
   -module-cache-path "$BUILD/module-cache" \
   Source/Preferences.swift Source/SelfTests.swift Source/main.swift \
@@ -25,6 +36,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
 PLIST
-codesign --force --sign - "$APP"
+codesign --force --timestamp=none --sign "$SIGNING_IDENTITY" "$APP"
+codesign --verify --deep --strict "$APP"
 "$APP/Contents/MacOS/MenuBarToggle" --self-test
 echo "Built $APP"

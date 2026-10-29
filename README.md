@@ -45,3 +45,7 @@ It then posts `AppleInterfaceMenuBarHidingChangedNotification` and `AppleInterfa
 The preference names and notifications are undocumented. The approach was informed by [FreeSwitch's research](https://github.com/Having-Liu/FreeSwitch), then independently exercised in a reversible live test on macOS 27.2 on October 28, 2026. The user confirmed a visible show/hide change, and all original preference values were restored.
 
 That test did not measure latency or prove Space preservation. Already-active fullscreen apps, multiple displays, external edits, sleep/wake, and other macOS versions still need live validation.
+
+## Signing updates
+
+The build requires a stable Developer ID Application identity, selected from Keychain or MENU_BAR_SIGNING_IDENTITY. It refuses ad-hoc or ambiguous identities and verifies the signed bundle. This preserves the designated requirement across updates.
