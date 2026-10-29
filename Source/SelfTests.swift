@@ -111,6 +111,31 @@ func runSelfTests() {
         check(memory.notifications == before && engine.overrideMode == nil, "unknown preferences cause no guessed writes")
         let encoded = try JSONEncoder().encode(config)
         check(try JSONDecoder().decode(RulesConfiguration.self, from: encoded) == config, "configuration roundtrip")
+        let commands: [SettingsCommand] = [.setDefault(.never), .setEnabled(false), .saveRule(config.rules[app]!), .removeRule(app), .requestPermission, .refreshPermission("fresh-request"), .setLaunchAtLogin(false), .setMenuBarIcon(true), .quitApplication]
+        for command in commands {
+            let data = try JSONEncoder().encode(command)
+            let note = Notification(name: SettingsBridge.command, userInfo: ["payload": data.base64EncodedString()])
+            check(SettingsBridge.decode(note) == command, "desktop companion command roundtrip")
+        }
+        check(SettingsBridge.decode(Notification(name: SettingsBridge.command, userInfo: ["payload": "invalid"])) == nil, "malformed companion command rejected")
+        let snapshot = SettingsSnapshot(configuration: config, trusted: true, failure: nil)
+        check(try JSONDecoder().decode(SettingsSnapshot.self, from: JSONEncoder().encode(snapshot)) == snapshot, "desktop companion snapshot roundtrip")
+        check(PermissionDisplayState.resolve(snapshot: snapshot, requestID: "new", timedOut: false) == .checking, "cached permission cannot be shown as a fresh result")
+        var permissionSnapshot = snapshot
+        permissionSnapshot.permissionRequestID = "new"
+        check(PermissionDisplayState.resolve(snapshot: permissionSnapshot, requestID: "new", timedOut: false) == .granted, "fresh granted permission hides setup action")
+        permissionSnapshot.trusted = false
+        check(PermissionDisplayState.resolve(snapshot: permissionSnapshot, requestID: "new", timedOut: false) == .notGranted, "fresh denied permission offers setup")
+        check(PermissionDisplayState.resolve(snapshot: permissionSnapshot, requestID: "reopened", timedOut: false) == .checking, "reopening requires another fresh check")
+        check(PermissionDisplayState.resolve(snapshot: permissionSnapshot, requestID: "reopened", timedOut: true) == .unavailable, "missing response is not mistaken for denied permission")
+        permissionSnapshot.ownerPID = 123
+        check(SettingsBridge.isReady(permissionSnapshot, ownerPID: 123), "current process readiness acknowledged")
+        check(!SettingsBridge.isReady(permissionSnapshot, ownerPID: 124), "previous process snapshot cannot acknowledge startup")
+        check(!SettingsBridge.isReady(permissionSnapshot, ownerPID: nil), "stopped process cannot acknowledge startup")
+        check(PermissionLabels.paneName(majorVersion: 26) == "Accessibility", "older macOS permission name")
+        check(PermissionLabels.paneName(majorVersion: 27) == "Device Control and Data Access", "macOS 27 permission name")
+        check(PermissionLabels.status(.granted, majorVersion: 27).hasSuffix(": Granted"), "granted state is explicit")
+        check(PermissionLabels.status(.notGranted, majorVersion: 27).hasSuffix(": Not Granted"), "ungranted state is explicit")
         let legacy = Data("{\"defaultMode\":3,\"enabled\":false,\"rules\":{\"legacy.app\":{\"bundleID\":\"legacy.app\",\"name\":\"Legacy\",\"path\":\"/Legacy.app\",\"mode\":0}}}".utf8)
         let migrated = try JSONDecoder().decode(RulesConfiguration.self, from: legacy)
         check(migrated.defaultMode == .never && !migrated.enabled && migrated.showMenuBarIcon, "existing configuration preserves defaults and starts with visible icon")
