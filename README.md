@@ -53,3 +53,7 @@ The build requires a stable Developer ID Application identity, selected from Key
 ## Rule engine
 
 Persistent explicit per-app modes and a default are modeled independently of the interface. The engine restores defaults after overrides, preserves external changes, and journals recovery after interrupted runs. Isolated tests cover switching, permission loss, unknown states, migration and rollback. UI integration follows separately.
+
+## Fullscreen observation
+
+The Accessibility monitor observes foreground apps, Spaces and focused-window changes, with debouncing, bounded background reads, wake/session handling and fallback polling. Only configured apps are inspected automatically. Permission checks do not prompt; setup opens the appropriate Privacy & Security pane.
