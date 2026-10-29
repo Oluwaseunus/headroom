@@ -1,7 +1,7 @@
 import Foundation
 import CoreFoundation
 
-enum MenuBarMode: Int, CaseIterable {
+enum MenuBarMode: Int, CaseIterable, Codable {
     case always = 0, desktopOnly, fullScreenOnly, never
 
     var title: String {
@@ -10,6 +10,16 @@ enum MenuBarMode: Int, CaseIterable {
         case .desktopOnly: return "On Desktop Only"
         case .fullScreenOnly: return "In Full Screen Only"
         case .never: return "Never"
+        }
+    }
+    // Settings describes showing the menu bar; macOS stores auto-hide modes.
+    static let visibilityOrder: [MenuBarMode] = [.never, .fullScreenOnly, .desktopOnly, .always]
+    var visibilityTitle: String {
+        switch self {
+        case .never: return "Always"
+        case .fullScreenOnly: return "On Desktop Only"
+        case .desktopOnly: return "In Full Screen Only"
+        case .always: return "Never"
         }
     }
     var desktopHidden: Bool { self == .always || self == .desktopOnly }
@@ -36,12 +46,13 @@ protocol PreferenceAccess {
 }
 
 enum PreferenceError: LocalizedError {
-    case write, verification, rollback
+    case write, verification, rollback, stateUnavailable
     var errorDescription: String? {
         switch self {
         case .write: return "macOS could not save the menu bar setting."
         case .verification: return "macOS did not retain the requested setting. Your previous values were restored."
         case .rollback: return "The change failed and the previous values could not be fully restored. Check Menu Bar in System Settings."
+        case .stateUnavailable: return "The current menu bar setting could not be read. Automatic changes are paused."
         }
     }
 }

@@ -24,6 +24,13 @@ func runSelfTests() {
         check(mode.desktopHidden == expected[mode.rawValue].0 && mode.fullScreenVisible == expected[mode.rawValue].1, "mode mapping")
         check(MenuBarMode.resolve(mode.values) == mode, "mode resolution")
     }
+    let visibility = MenuBarMode.visibilityOrder
+    check(visibility.map(\.visibilityTitle) == ["Always", "On Desktop Only", "In Full Screen Only", "Never"], "visibility control order")
+    let shownStates = [(true, true), (true, false), (false, true), (false, false)]
+    for (index, mode) in visibility.enumerated() {
+        check(!mode.desktopHidden == shownStates[index].0 && mode.fullScreenVisible == shownStates[index].1,
+              "show labels preserve the inverse macOS hide behaviour")
+    }
     check(MenuBarMode.resolve([nil, nil, nil]) == nil, "missing keys")
     check(MenuBarMode.resolve([0, 0, 3]) == nil, "conflicting keys")
     check(MenuBarMode.resolve([0, 1, 9]) == nil, "invalid enum")
@@ -41,5 +48,78 @@ func runSelfTests() {
             check(!store.isWriting, "write guard released after error")
         }
     } catch { check(false, "unexpected error: \(error)") }
+    let app = "test.brave"
+    let second = "test.video"
+    var config = RulesConfiguration(defaultMode: .never)
+    config.rules[app] = AppRule(bundleID: app, name: "Brave", path: "/example/Brave.app", mode: .always)
+    config.rules[second] = AppRule(bundleID: second, name: "Video", path: "/example/Video.app", mode: .desktopOnly)
+    let fullscreen = AppContext(bundleID: app, fullscreen: true)
+    check(RuleDecision.resolve(config, context: fullscreen, trusted: true) == .useRule(.always), "matching fullscreen app")
+    check(RuleDecision.resolve(config, context: AppContext(bundleID: app, fullscreen: false), trusted: true) == .useDefault, "windowed app")
+    check(RuleDecision.resolve(config, context: AppContext(bundleID: "other"), trusted: true) == .useDefault, "unmatched app")
+    check(RuleDecision.resolve(config, context: AppContext(bundleID: app), trusted: true) == .unknown, "failed AX read stays unknown")
+    check(RuleDecision.resolve(config, context: fullscreen, trusted: false) == .useDefault, "permission loss")
+    var disabled = config
+    disabled.enabled = false
+    check(RuleDecision.resolve(disabled, context: fullscreen, trusted: true) == .useDefault, "disabled automation")
+    let memory = FakePreferences()
+    memory.values = MenuBarMode.never.values
+    let rulePreferences = MenuBarPreferences(access: memory)
+    let engine = RuleEngine(preferences: rulePreferences)
+    var recovery: OverrideRecovery?
+    do {
+        try engine.reconcile(&config, context: fullscreen, trusted: true) { recovery = $0 }
+        check(rulePreferences.currentMode() == .always && engine.overrideBundleID == app, "enter fullscreen applies rule")
+        check(config.defaultMode == .never && recovery?.baseline == .never, "preserve default while overridden")
+        let notificationCount = memory.notifications
+        try engine.reconcile(&config, context: fullscreen, trusted: true) { recovery = $0 }
+        check(memory.notifications == notificationCount, "stable context avoids repeated writes")
+        try engine.reconcile(&config, context: AppContext(bundleID: app), trusted: true) { recovery = $0 }
+        check(rulePreferences.currentMode() == .always, "transient unknown in same app preserves state")
+        try engine.reconcile(&config, context: AppContext(bundleID: second), trusted: true) { recovery = $0 }
+        check(rulePreferences.currentMode() == .never && engine.overrideMode == nil, "different unknown app restores default")
+        try engine.reconcile(&config, context: fullscreen, trusted: true) { recovery = $0 }
+        try engine.setDefault(.fullScreenOnly, configuration: &config) { recovery = $0 }
+        check(rulePreferences.currentMode() == .always && config.defaultMode == .fullScreenOnly, "default edit preserves active rule")
+        check(recovery?.baseline == .fullScreenOnly, "recovery tracks edited default")
+        try engine.reconcile(&config, context: AppContext(bundleID: second, fullscreen: true), trusted: true) { recovery = $0 }
+        check(rulePreferences.currentMode() == .desktopOnly && config.defaultMode == .fullScreenOnly, "switching matching apps preserves baseline")
+        try engine.reconcile(&config, context: AppContext(bundleID: second, fullscreen: false), trusted: true) { recovery = $0 }
+        check(rulePreferences.currentMode() == .fullScreenOnly && recovery == nil, "exit fullscreen restores and clears recovery")
+        try engine.reconcile(&config, context: fullscreen, trusted: true) { recovery = $0 }
+        try engine.reconcile(&config, context: fullscreen, trusted: false) { recovery = $0 }
+        check(rulePreferences.currentMode() == .fullScreenOnly && engine.overrideMode == nil, "permission revoked restores default")
+        try engine.reconcile(&config, context: fullscreen, trusted: true) { recovery = $0 }
+        config.rules.removeValue(forKey: app)
+        try engine.reconcile(&config, context: fullscreen, trusted: true) { recovery = $0 }
+        check(rulePreferences.currentMode() == .fullScreenOnly, "deleting active rule restores default")
+        memory.values = MenuBarMode.never.values
+        let externalNotificationCount = memory.notifications
+        try engine.reconcile(&config, context: AppContext(bundleID: "other"), trusted: true) { recovery = $0 }
+        check(config.defaultMode == .never && memory.notifications == externalNotificationCount, "external default edit is adopted without writing")
+        config.rules[app] = AppRule(bundleID: app, name: "Brave", path: "", mode: .always)
+        try engine.reconcile(&config, context: fullscreen, trusted: true) { recovery = $0 }
+        memory.values = MenuBarMode.desktopOnly.values
+        try engine.restore(&config) { recovery = $0 }
+        check(rulePreferences.currentMode() == .desktopOnly && config.defaultMode == .desktopOnly, "quit preserves different external choice")
+        try engine.reconcile(&config, context: fullscreen, trusted: true) { recovery = $0 }
+        try engine.restore(&config) { recovery = $0 }
+        check(rulePreferences.currentMode() == .desktopOnly && recovery == nil, "quit restores an owned override")
+        memory.values = [nil, nil, nil]
+        let before = memory.notifications
+        try engine.reconcile(&config, context: fullscreen, trusted: true) { recovery = $0 }
+        check(memory.notifications == before && engine.overrideMode == nil, "unknown preferences cause no guessed writes")
+        let encoded = try JSONEncoder().encode(config)
+        check(try JSONDecoder().decode(RulesConfiguration.self, from: encoded) == config, "configuration roundtrip")
+        let legacy = Data("{\"defaultMode\":3,\"enabled\":false,\"rules\":{\"legacy.app\":{\"bundleID\":\"legacy.app\",\"name\":\"Legacy\",\"path\":\"/Legacy.app\",\"mode\":0}}}".utf8)
+        let migrated = try JSONDecoder().decode(RulesConfiguration.self, from: legacy)
+        check(migrated.defaultMode == .never && !migrated.enabled && migrated.showMenuBarIcon, "existing configuration preserves defaults and starts with visible icon")
+        check(migrated.rules["legacy.app"]?.mode == .always, "existing app rule modes migrate")
+        let inheritedData = Data("{\"defaultMode\":3,\"rules\":{\"inherited.app\":{\"bundleID\":\"inherited.app\",\"name\":\"Inherited\",\"path\":\"\"}}}".utf8)
+        let cleaned = try JSONDecoder().decode(RulesConfiguration.self, from: inheritedData)
+        check(cleaned.rules.isEmpty && cleaned.defaultMode == .never, "legacy inherited rows migrate to following default without a rule")
+        check(MenuBarMode.allCases.count == 4, "per-app modes contain only the four explicit choices")
+
+    } catch { check(false, "rule engine error: \(error)") }
     print("Passed \(checks) checks. No system preferences were changed.")
 }

@@ -18,7 +18,7 @@ if [[ -z "$SIGNING_IDENTITY" || "$SIGNING_IDENTITY" == *$'\n'* || "$SIGNING_IDEN
 fi
 xcrun swiftc -O -warnings-as-errors -sdk "$SDK" -target arm64-apple-macosx15.0 \
   -module-cache-path "$BUILD/module-cache" \
-  Source/Preferences.swift Source/SelfTests.swift Source/main.swift \
+  Source/Preferences.swift Source/AppRules.swift Source/SelfTests.swift Source/main.swift \
   -o "$APP/Contents/MacOS/MenuBarToggle"
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>

@@ -49,3 +49,7 @@ That test did not measure latency or prove Space preservation. Already-active fu
 ## Signing updates
 
 The build requires a stable Developer ID Application identity, selected from Keychain or MENU_BAR_SIGNING_IDENTITY. It refuses ad-hoc or ambiguous identities and verifies the signed bundle. This preserves the designated requirement across updates.
+
+## Rule engine
+
+Persistent explicit per-app modes and a default are modeled independently of the interface. The engine restores defaults after overrides, preserves external changes, and journals recovery after interrupted runs. Isolated tests cover switching, permission loss, unknown states, migration and rollback. UI integration follows separately.
