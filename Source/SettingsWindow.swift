@@ -64,6 +64,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     var onPermission: (() -> Void)?
     var onSaveRule: ((AppRule) -> Void)?
     var onRemoveRule: ((String) -> Void)?
+    var onAbout: (() -> Void)?
     var onClose: (() -> Void)?
     private let defaultPopup = settingsPopUpButton()
     private let add = NSButton(title: "Add app…", target: nil, action: nil)
@@ -73,7 +74,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let launchAtLogin = NSSwitch()
     private let showIcon = NSSwitch()
     private let loginNote = NSTextField(wrappingLabelWithString: "")
-    private let iconNote = NSTextField(wrappingLabelWithString: "Open Menu Bar Toggle from Finder to return to Settings when the menu bar icon is hidden.")
+    private let iconNote = NSTextField(wrappingLabelWithString: "Open Headroom from Finder to return to Settings when the menu bar icon is hidden.")
     private let ruleCount = NSTextField(labelWithString: "")
     private let rules = NSStackView()
     private let permission = NSTextField(labelWithString: "")
@@ -280,6 +281,14 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         for view in appSection.arrangedSubviews { stretch(view, in: appSection) }
         body.addArrangedSubview(appSection)
         stretch(appSection, in: body)
+        let about = NSButton(title: "About Headroom…", target: self, action: #selector(showAbout))
+        about.bezelStyle = .rounded
+        about.controlSize = .regular
+        let footer = NSStackView(views: [NSView(), about])
+        footer.distribution = .fill
+        about.setContentHuggingPriority(.required, for: .horizontal)
+        body.addArrangedSubview(footer)
+        stretch(footer, in: body)
 
     }
 
@@ -399,6 +408,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         add.isEnabled = granted
         // Keep existing rules editable/removable, including while permission is off.
     }
+
+    @objc private func showAbout() { onAbout?() }
 
     @objc private func changeDefault() {
         guard let mode = MenuBarMode(rawValue: defaultPopup.indexOfSelectedItem) else { return }

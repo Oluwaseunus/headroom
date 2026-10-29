@@ -37,10 +37,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         if store.configuration.defaultMode == nil { store.configuration.defaultMode = preferences.currentMode() }
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        let image = NSImage(systemSymbolName: "menubar.rectangle", accessibilityDescription: "Menu Bar Toggle")
+        let image = NSImage(systemSymbolName: "menubar.rectangle", accessibilityDescription: "Headroom")
         image?.isTemplate = true
         statusItem.button?.image = image
-        statusItem.button?.setAccessibilityLabel("Menu Bar Toggle")
+        statusItem.button?.setAccessibilityLabel("Headroom")
         defaultItem.keyEquivalentModifierMask = []
         defaultItem.submenu = makeChoices(custom: false)
         customItem.isAlternate = true
@@ -52,7 +52,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let settingsItem = NSMenuItem(title: "Settings…", action: #selector(showSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
-        let quit = NSMenuItem(title: "Quit Menu Bar Toggle", action: #selector(quitApp), keyEquivalent: "q")
+        let about = NSMenuItem(title: "About Headroom", action: #selector(showAbout), keyEquivalent: "")
+        about.target = self
+        menu.addItem(about)
+        let quit = NSMenuItem(title: "Quit Headroom", action: #selector(quitApp), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
         menu.autoenablesItems = false
@@ -83,7 +86,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let item = NSMenuItem(title: "Settings…", action: #selector(showSettings), keyEquivalent: ",")
         item.target = self
         appMenu.addItem(item)
-        let quit = NSMenuItem(title: "Quit Menu Bar Toggle", action: #selector(quitApp), keyEquivalent: "q")
+        let about = NSMenuItem(title: "About Headroom", action: #selector(showAbout), keyEquivalent: "")
+        about.target = self
+        appMenu.addItem(about)
+        let quit = NSMenuItem(title: "Quit Headroom", action: #selector(quitApp), keyEquivalent: "q")
         quit.target = self
         appMenu.addItem(quit)
         appItem.submenu = appMenu
@@ -256,9 +262,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         publishSettings()
     }
+    @objc private func showAbout() {
+        let helper = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/Headroom Settings.app")
+        let config = NSWorkspace.OpenConfiguration()
+        config.activates = true
+        config.arguments = ["--show-about"]
+        NSWorkspace.shared.openApplication(at: helper, configuration: config) { [weak self] _, error in
+            if let error { DispatchQueue.main.async { self?.fail(error) }; return }
+            DistributedNotificationCenter.default().postNotificationName(SettingsBridge.showAbout, object: SettingsBridge.owner, userInfo: nil, deliverImmediately: true)
+        }
+    }
     @objc private func showSettings() {
         publishSettings()
-        let helper = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/Menu Bar Toggle Settings.app")
+        let helper = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/Headroom Settings.app")
         let config = NSWorkspace.OpenConfiguration()
         config.activates = true
         NSWorkspace.shared.openApplication(at: helper, configuration: config) { [weak self] _, error in

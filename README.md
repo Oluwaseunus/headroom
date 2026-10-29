@@ -1,8 +1,8 @@
-# Menu Bar Toggle
+# Headroom
 
 A tiny native macOS menu bar utility for changing when the system menu bar hides.
 
-The menu contains **Hide Menu Bar**, **Settings…**, and **Quit Menu Bar Toggle**. The mode selector offers the four macOS modes:
+The menu contains **Hide Menu Bar**, **Settings…**, **About Headroom**, and **Quit Headroom**. The mode selector offers the four macOS modes:
 
 - Always
 - On Desktop Only
@@ -13,7 +13,7 @@ Move the pointer away from the top edge after choosing a mode to see hiding. The
 
 ## Custom fullscreen app settings
 
-Open **Settings…** (Command–Comma) and choose **Open System Settings** to approve **Menu Bar Toggle**. On macOS 27, this permission is named **Device Control and Data Access** under Privacy & Security; on earlier macOS versions it is named **Accessibility**. This is separate from any permission granted to an earlier test probe. Each time Settings opens, it asks the menu bar process for a fresh, nonprompting permission check. The permission banner is hidden when access is granted. When access is missing, Settings shows a warning and an Open System Settings button; cached permission data is not shown as a fresh result. Manual menu bar changes work without Accessibility access.
+Open **Settings…** (Command–Comma) and choose **Open System Settings** to approve **Headroom**. On macOS 27, this permission is named **Device Control and Data Access** under Privacy & Security; on earlier macOS versions it is named **Accessibility**. This is separate from any permission granted to an earlier test probe. Each time Settings opens, it asks the menu bar process for a fresh, nonprompting permission check. The permission banner is hidden when access is granted. When access is missing, Settings shows a warning and an Open System Settings button; cached permission data is not shown as a fresh result. Manual menu bar changes work without Accessibility access.
 
 - Normally, choosing a mode changes the default.
 - With a readable fullscreen app in front, hold **Option (⌥)** to change the same selector to **Hide Menu Bar for App Name**. Choosing a mode saves that app's custom rule.
@@ -23,7 +23,7 @@ Open **Settings…** (Command–Comma) and choose **Open System Settings** to ap
 
 Opening a menu does not change the setting. The target app is captured when the menu opens and checked again before saving a rule. Unknown fullscreen state does not count as windowed. A temporary unreadable state in the same app preserves the active override; moving to another app releases it.
 
-The Settings window opens at 540 points wide, with General, Default Behaviour and App Rules sections and compact native controls. The content scrolls on smaller screens. General provides Launch at Login through SMAppService and a persistent menu bar icon switch. The window opens once when this feature is first launched. The Open System Settings button opens the permission pane directly; on macOS 27 its title is Device Control and Data Access (formerly Accessibility). If the main app is not listed, add Menu Bar Toggle.app there. Opening Settings only checks permission and does not prompt or navigate to System Settings.
+The Settings window opens at 540 points wide, with General, Default Behaviour and App Rules sections and compact native controls. About Headroom is available from the menu bar, the Settings app menu, and the Settings footer. The content scrolls on smaller screens. General provides Launch at Login through SMAppService and a persistent menu bar icon switch. The window opens once when this feature is first launched. The Open System Settings button opens the permission pane directly; on macOS 27 its title is Device Control and Data Access (formerly Accessibility). If the main app is not listed, add Headroom.app there. Opening Settings only checks permission and does not prompt or navigate to System Settings.
 
 ## Build and run
 
@@ -33,7 +33,7 @@ Requires an Apple Silicon Mac, Xcode with its command-line tools selected, and a
 git clone https://github.com/Oluwaseunus/menu-bar-toggle.git
 cd menu-bar-toggle
 zsh build.sh
-open "Menu Bar Toggle.app"
+open "Headroom.app"
 ```
 
 The build compiles the Swift/AppKit source, creates an app bundle with a nested Settings companion, signs both locally, and runs 69 isolated checks. Generated bundles and build caches are ignored by Git. This local Apple Silicon preview is unsandboxed, Developer ID signed, and not notarized. Launch at Login is off by default and changes only when the user uses its switch. The app does not install itself in Applications. The build uses a stable signing identity so updates can satisfy the same designated requirement. Switching from an earlier ad-hoc build requires approving the newly signed main app once.
@@ -68,4 +68,8 @@ That test did not measure latency or prove Space preservation. A separate Access
 
 Menu bar visibility and app rules apply system-wide across connected displays. Settings does not offer unsupported per-display controls.
 
-Hiding the menu bar icon leaves the service and rules running. Reopen the main app from Finder to reach Settings. The Settings app menu also includes Quit Menu Bar Toggle.
+Hiding the menu bar icon leaves the service and rules running. Reopen the main app from Finder to reach Settings. The Settings app menu also includes Quit Headroom.
+
+## App identity
+
+Headroom keeps the existing `love.oluwaseun.MenuBarToggle` bundle identifiers, preferences domain, and signing identity to preserve saved rules and permission continuity. The application bundle and user-facing branding are Headroom. The GitHub repository retains its existing URL.

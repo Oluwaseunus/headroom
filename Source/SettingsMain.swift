@@ -27,12 +27,14 @@ private final class DesktopSettingsDelegate: NSObject, NSApplicationDelegate {
             if self?.permissionState == .unavailable { self?.requestFreshPermission() }
             else { SettingsBridge.send(.requestPermission) }
         }
+        controller.onAbout = { [weak self] in self?.showAbout() }
         controller.onClose = { NSApp.terminate(nil) }
         let center = DistributedNotificationCenter.default()
         tokens.append(center.addObserver(forName: SettingsBridge.changed, object: SettingsBridge.owner, queue: .main) { [weak self] _ in self?.refresh() })
         tokens.append(center.addObserver(forName: SettingsBridge.quit, object: SettingsBridge.owner, queue: .main) { _ in NSApp.terminate(nil) })
+        tokens.append(center.addObserver(forName: SettingsBridge.showAbout, object: SettingsBridge.owner, queue: .main) { [weak self] _ in self?.showAbout() })
         installMenu()
-        show()
+        if CommandLine.arguments.contains("--show-about") { showAbout() } else { show() }
     }
     private func refresh() {
         guard let updated = SettingsBridge.read(), updated != snapshot else { return }
@@ -83,8 +85,15 @@ private final class DesktopSettingsDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
         let app = NSMenuItem()
         let appMenu = NSMenu()
+        let about = NSMenuItem(title: "About Headroom", action: #selector(showAbout), keyEquivalent: "")
+        about.target = self
+        appMenu.addItem(about)
+        let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+        settings.target = self
+        appMenu.addItem(settings)
+        appMenu.addItem(.separator())
         appMenu.addItem(NSMenuItem(title: "Quit Settings", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
-        let quitMain = NSMenuItem(title: "Quit Menu Bar Toggle", action: #selector(quitMenuBarApp), keyEquivalent: "")
+        let quitMain = NSMenuItem(title: "Quit Headroom", action: #selector(quitMenuBarApp), keyEquivalent: "")
         quitMain.target = self
         appMenu.addItem(quitMain)
         app.submenu = appMenu
@@ -95,6 +104,22 @@ private final class DesktopSettingsDelegate: NSObject, NSApplicationDelegate {
         file.submenu = fileMenu
         menu.addItem(file)
         NSApp.mainMenu = menu
+    }
+    @objc private func openSettings() { show() }
+    @objc private func showAbout() {
+        let credits = NSMutableAttributedString(string: "Your menu bar, when you need it.\n\nControl menu bar visibility and automatically apply settings for your fullscreen apps.\n\nMade by Oluwaseun Adetunji\n\n")
+        credits.append(NSAttributedString(string: "View source on GitHub", attributes: [.link: URL(string: "https://github.com/Oluwaseunus/menu-bar-toggle")!]))
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .center
+        credits.addAttributes([.font: NSFont.systemFont(ofSize: 12), .paragraphStyle: paragraph], range: NSRange(location: 0, length: credits.length))
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.orderFrontStandardAboutPanel(options: [
+            .applicationName: "Headroom",
+            .applicationIcon: NSImage(systemSymbolName: "menubar.rectangle", accessibilityDescription: "Headroom")!,
+            .applicationVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "",
+            .version: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "",
+            .credits: credits
+        ])
     }
     @objc private func quitMenuBarApp() { SettingsBridge.send(.quitApplication) }
     private func ensureMenuBarAppRunning(completion: @escaping () -> Void) {

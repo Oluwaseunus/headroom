@@ -53,6 +53,7 @@ enum PermissionLabels {
 // The menu bar process remains the only writer of rules and system settings.
 // Its desktop companion sends small commands and reads acknowledged snapshots.
 enum SettingsBridge {
+    static let showAbout = Notification.Name("love.oluwaseun.MenuBarToggle.showAbout")
     static let owner = "love.oluwaseun.MenuBarToggle"
     static let command = Notification.Name(owner + ".settingsCommand")
     static let changed = Notification.Name(owner + ".settingsChanged")

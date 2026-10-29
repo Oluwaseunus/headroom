@@ -1,9 +1,9 @@
 #!/bin/zsh
 set -eu
 cd -- "${0:A:h}"
-APP="$PWD/Menu Bar Toggle.app"
+APP="$PWD/Headroom.app"
 BUILD="$PWD/.build"
-SETTINGS_APP="$APP/Contents/Helpers/Menu Bar Toggle Settings.app"
+SETTINGS_APP="$APP/Contents/Helpers/Headroom Settings.app"
 mkdir -p "$APP/Contents/MacOS" "$SETTINGS_APP/Contents/MacOS" "$BUILD/module-cache"
 SDK=$(xcrun --sdk macosx --show-sdk-path)
 SIGNING_IDENTITY="${MENU_BAR_SIGNING_IDENTITY:-}"
@@ -31,11 +31,11 @@ cat > "$SETTINGS_APP/Contents/Info.plist" <<'PLIST'
 <plist version="1.0"><dict>
 <key>CFBundleExecutable</key><string>MenuBarToggleSettings</string>
 <key>CFBundleIdentifier</key><string>love.oluwaseun.MenuBarToggle.Settings</string>
-<key>CFBundleName</key><string>Menu Bar Toggle</string>
-<key>CFBundleDisplayName</key><string>Menu Bar Toggle</string>
+<key>CFBundleName</key><string>Headroom</string>
+<key>CFBundleDisplayName</key><string>Headroom</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.3.0</string>
-<key>CFBundleVersion</key><string>4</string>
+<key>CFBundleShortVersionString</key><string>0.4.0</string>
+<key>CFBundleVersion</key><string>5</string>
 <key>LSMinimumSystemVersion</key><string>15.0</string>
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
@@ -47,11 +47,11 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <plist version="1.0"><dict>
 <key>CFBundleExecutable</key><string>MenuBarToggle</string>
 <key>CFBundleIdentifier</key><string>love.oluwaseun.MenuBarToggle</string>
-<key>CFBundleName</key><string>Menu Bar Toggle</string>
-<key>CFBundleDisplayName</key><string>Menu Bar Toggle</string>
+<key>CFBundleName</key><string>Headroom</string>
+<key>CFBundleDisplayName</key><string>Headroom</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.3.0</string>
-<key>CFBundleVersion</key><string>4</string>
+<key>CFBundleShortVersionString</key><string>0.4.0</string>
+<key>CFBundleVersion</key><string>5</string>
 <key>LSMinimumSystemVersion</key><string>15.0</string>
 <key>LSUIElement</key><true/>
 <key>NSHighResolutionCapable</key><true/>
